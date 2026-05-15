@@ -30,7 +30,6 @@ install_linux_from_github() {
   esac
 
   local tmp; tmp="$(mktemp -d)"
-  trap 'rm -rf "$tmp"' EXIT
 
   local version
   version="$(curl -fsSL https://api.github.com/repos/jesseduffield/lazygit/releases/latest \
@@ -44,6 +43,7 @@ install_linux_from_github() {
     "https://github.com/jesseduffield/lazygit/releases/download/v${version}/lazygit_${version}_Linux_${arch}.tar.gz"
   tar -xzf "$tmp/lazygit.tar.gz" -C "$tmp" lazygit
   sudo install -m 0755 "$tmp/lazygit" /usr/local/bin/lazygit
+  rm -rf "$tmp"
 }
 
 install() {
