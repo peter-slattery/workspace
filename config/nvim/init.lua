@@ -63,7 +63,7 @@ local fn = vim.fn
 local install_path = fn.stdpath("data") .. "/site/pack/vendor/start"
 
 -- Helper to clone a repo if it doesn't exist
-local function ensure_repo(repo_url, folder_name)
+local function ensure_repo(repo_url, folder_name, branch)
 	local path = install_path .. "/" .. folder_name
 	if vim.fn.isdirectory(install_path) == 0 then
 		vim.fn.mkdir(install_path, 'p')
@@ -71,11 +71,20 @@ local function ensure_repo(repo_url, folder_name)
 	end
 	if vim.fn.empty(fn.glob(path)) > 0 then
 		print("Installing " .. folder_name .. "...")
-		vim.fn.system({"git", "clone", "--depth", "1", repo_url, path})
+		local cmd = {"git", "clone", "--depth", "1"}
+		if branch then
+			table.insert(cmd, "--branch")
+			table.insert(cmd, branch)
+		end
+		table.insert(cmd, repo_url)
+		table.insert(cmd, path)
+		vim.fn.system(cmd)
 		if vim.fn.isdirectory(path) == 1 then
 		    vim.opt.runtimepath:append(path)
 		end
+		return true
 	end
+	return false
 end
 
 -- ==========================
@@ -182,6 +191,71 @@ vim.keymap.set("n", "<leader>gd", ":Gdiffsplit<CR>", { noremap = true, silent = 
 vim.keymap.set("n", "<leader>gb", ":Gblame<CR>", { noremap = true, silent = true })
 
 -- ==========================
+-- tree-sitter
+-- ==========================
+
+-- INSTALLATION
+-- 1. Requires a C compiler (cc / gcc / clang) on PATH to build parsers
+-- 2. After first start, run :TSUpdate to fetch the parsers in ensure_installed
+-- 3. Pinned to 'master' branch — the in-progress 'main' rewrite has a different API
+
+local ts_fresh = ensure_repo("https://github.com/nvim-treesitter/nvim-treesitter.git",
+                             "nvim-treesitter", "master")
+ensure_repo("https://github.com/nvim-treesitter/nvim-treesitter-textobjects.git",
+            "nvim-treesitter-textobjects", "master")
+
+pcall(function()
+  require("nvim-treesitter.configs").setup({
+    ensure_installed = {
+      "c", "cpp", "rust", "typescript", "tsx", "javascript",
+      "lua", "vim", "vimdoc", "query",
+    },
+    sync_install = false,
+    auto_install = false, -- only install what's listed above
+    highlight = {
+      enable = true,
+      additional_vim_regex_highlighting = false,
+    },
+    indent = {
+      enable = true,
+      disable = { "cpp" }, -- cinoptions handles C++ better; TS indent fights it
+    },
+    incremental_selection = {
+      enable = true,
+      -- defaults: gnn / grn / grc / grm (won't shadow your leader maps)
+    },
+    textobjects = {
+      select = {
+        enable = true,
+        lookahead = true, -- jump forward to the next textobject
+        keymaps = {
+          ["af"] = "@function.outer",
+          ["if"] = "@function.inner",
+          ["ac"] = "@class.outer",
+          ["ic"] = "@class.inner",
+          ["aa"] = "@parameter.outer",
+          ["ia"] = "@parameter.inner",
+        },
+      },
+      move = {
+        enable = true,
+        set_jumps = true, -- adds to jumplist so <C-o>/<C-i> work
+        goto_next_start     = { ["]m"] = "@function.outer", ["]]"] = "@class.outer" },
+        goto_previous_start = { ["[m"] = "@function.outer", ["[["] = "@class.outer" },
+      },
+    },
+  })
+  if ts_fresh then
+    vim.schedule(function() vim.cmd("TSUpdate") end)
+  end
+end)
+
+-- Tree-sitter folding (off by default; toggle with zi, fold/unfold with za)
+vim.opt.foldmethod = "expr"
+vim.opt.foldexpr   = "nvim_treesitter#foldexpr()"
+vim.opt.foldenable = false
+
+-- ==========================
 -- Key mappings
 -- ==========================
 
@@ -194,6 +268,18 @@ map("n", "<leader>u", "<C-w>l", opts)
 
 -- Search
 map("n", "<leader>g", ":Rg<CR>", opts) -- ripgrep search
+map("x", "<leader>g", function() -- ripgrep visual selection (literal, no regex)
+  local save = vim.fn.getreg('h')
+  local save_type = vim.fn.getregtype('h')
+  vim.cmd('noautocmd silent normal! gv"hy')
+  local sel = vim.fn.getreg('h'):gsub("\n", " ")
+  vim.fn.setreg('h', save, save_type)
+  if sel == "" then return end
+  local cmd = "rg --column --line-number --no-heading --color=always --smart-case --fixed-strings -- "
+              .. vim.fn["fzf#shellescape"](sel)
+  local spec = vim.fn["fzf#vim#with_preview"]({ options = { "--query=" .. sel } })
+  vim.fn["fzf#vim#grep"](cmd, spec)
+end, { noremap = true, silent = true })
 map("n", "<leader>/", ":BLines<CR>", opts) -- search in current buffer
 
 -- Quickfix
@@ -264,7 +350,7 @@ map('n', '<leader>s', ':%s/\\<<C-r><C-w>\\>//g<Left><Left>', { noremap = true })
 map('v', '<leader>s', '"hy:%s/<C-r>h//g<Left><Left>', { noremap = true }) -- replace visual selection
 
 -- Terminal Nav
-local function jump_to_terminal(name)
+local function jump_to_terminal(name, repeat_last_command)
   for _, win in ipairs(vim.api.nvim_list_wins()) do
     local buf = vim.api.nvim_win_get_buf(win)
     if vim.api.nvim_buf_get_name(buf):match(name .. "$") then
@@ -298,10 +384,12 @@ local function jump_to_terminal(name)
   if #vim.api.nvim_list_wins() > 1 then vim.cmd("wincmd w") end
   vim.api.nvim_set_current_buf(target_buf)
   vim.cmd("startinsert")
-  vim.api.nvim_chan_send(chan, "\027[A")
+  if repeat_last_command then
+      vim.api.nvim_chan_send(chan, "\027[A")
+  end
 end
 
-vim.keymap.set('n', '<leader>1', function() jump_to_terminal("build") end, { noremap = true })
+vim.keymap.set('n', '<leader>1', function() jump_to_terminal("build", true) end, { noremap = true })
 vim.keymap.set('n', '<leader>2', function() jump_to_terminal("git") end, { noremap = true })
 vim.keymap.set('n', '<leader>3', function() jump_to_terminal("llm") end, { noremap = true })
 
