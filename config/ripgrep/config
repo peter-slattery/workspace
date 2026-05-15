@@ -1,0 +1,6 @@
+# Ripgrep configuration
+# Each non-comment line is a single CLI flag passed to rg (e.g. --smart-case).
+# Reference: https://github.com/BurntSushi/ripgrep/blob/master/GUIDE.md#configuration-file
+#
+# Ripgrep does NOT auto-discover this file. Set RIPGREP_CONFIG_PATH in your
+# shell to point at this file for it to take effect.
