@@ -5,7 +5,8 @@ Notes to guide development of this repo. Read this before making changes.
 ## Core Principles
 
 - **Cross-platform**: This repo must work out of the box on Windows, macOS, and Linux. The only required step after cloning is running `bin/start.sh`.
-- **Bash everywhere**: All scripts are written in bash. On Windows, they are run via git-bash (which ships with Git for Windows). Do not introduce PowerShell, batch, zsh-only, or platform-specific shells.
+- **Bash for scripts**: All scripts in this repo are written in bash. On Windows, they are run via git-bash (which ships with Git for Windows). Do not introduce PowerShell, batch, or other script languages.
+- **Target the OS default interactive shell**: When wiring shell init (rc-file blocks, `--bash`/`--zsh` flags, `init bash`/`init zsh`), match the platform default — zsh on macOS, bash on Linux and git-bash on Windows. The `rc_shell_name` and `RC_FILE` helpers in `bin/utils/shell_rc.sh` encode this; use them rather than hard-coding bash.
 - **Consistent environment**: The working environment produced by `bin/start.sh` should be mostly identical across OSes. A user moving between Linux, macOS, and Windows should see the same tools, versions, and behavior.
 
 ## Implications

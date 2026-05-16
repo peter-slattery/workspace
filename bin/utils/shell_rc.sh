@@ -1,19 +1,35 @@
 #!/usr/bin/env bash
 
-# Idempotently manage marker-delimited blocks in ~/.bashrc.
+# Idempotently manage marker-delimited blocks in the user's shell rc file.
 #
-# Each block is bracketed by:
+# Targets ~/.zshrc on macOS (default shell since Catalina), ~/.bashrc
+# elsewhere (Linux, git-bash on Windows). Each block is bracketed by:
 #   # BEGIN startup-<name>
 #   ...
 #   # END startup-<name>
 #
-# write_bashrc_block <name> <content>   — replace existing block (or append if absent)
-# remove_bashrc_block <name>            — strip the block out
+# write_rc_block  <name> <content>   — replace existing block (or append if absent)
+# remove_rc_block <name>             — strip the block out
+# rc_shell_name                      — echo "zsh" or "bash"; use to pick the
+#                                      right shell-init flavor (e.g. `fzf --$(rc_shell_name)`)
 #
 # A block is rewritten only when its content actually changes, so re-running
 # is silent.
 
-RC_FILE="$HOME/.bashrc"
+# shellcheck source=detect_os.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/detect_os.sh"
+
+case "$(detect_os)" in
+  macos) RC_FILE="$HOME/.zshrc"  ;;
+  *)     RC_FILE="$HOME/.bashrc" ;;
+esac
+
+rc_shell_name() {
+  case "$(detect_os)" in
+    macos) echo zsh  ;;
+    *)     echo bash ;;
+  esac
+}
 
 _rc_extract_block() {
   local begin="$1" end="$2" file="$3"
@@ -35,7 +51,7 @@ _rc_strip_block() {
   mv "$tmp" "$file"
 }
 
-write_bashrc_block() {
+write_rc_block() {
   local name="$1" content="$2"
   local begin="# BEGIN startup-${name}"
   local end="# END startup-${name}"
@@ -60,7 +76,7 @@ write_bashrc_block() {
   echo "Updated ${name} block in $RC_FILE (re-source or open a new shell)"
 }
 
-remove_bashrc_block() {
+remove_rc_block() {
   local name="$1"
   local begin="# BEGIN startup-${name}"
   local end="# END startup-${name}"

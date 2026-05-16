@@ -15,7 +15,7 @@ if [[ "$OS" == "unknown" ]]; then
   exit 1
 fi
 
-# Newer than apt's 0.29 on Ubuntu — we need 0.48+ for `fzf --bash`.
+# Newer than apt's 0.29 on Ubuntu — we need 0.48+ for `fzf --bash` / `--zsh`.
 install_linux_from_github() {
   local arch
   case "$(uname -m)" in
@@ -38,15 +38,16 @@ install_linux_from_github() {
   rm -rf "$tmp"
 }
 
-# Whether the resolved fzf supports `fzf --bash` integration (0.48+).
-fzf_supports_bash_init() {
-  command -v fzf >/dev/null 2>&1 && fzf --bash >/dev/null 2>&1
+# Whether the resolved fzf supports shell-init integration (0.48+).
+fzf_supports_shell_init() {
+  local sh; sh="$(rc_shell_name)"
+  command -v fzf >/dev/null 2>&1 && fzf --"$sh" >/dev/null 2>&1
 }
 
 install() {
   echo "Installing fzf..."
-  if fzf_supports_bash_init; then
-    echo "  Already installed (with --bash support)"
+  if fzf_supports_shell_init; then
+    echo "  Already installed (with --$(rc_shell_name) support)"
     return 0
   fi
   case "$OS" in
@@ -72,13 +73,14 @@ install() {
 }
 
 configure() {
+  local sh; sh="$(rc_shell_name)"
   local block
-  block="$(cat <<'EOF'
-if command -v fzf >/dev/null 2>&1 && fzf --bash >/dev/null 2>&1; then
-  eval "$(fzf --bash)"
+  block="$(cat <<EOF
+if command -v fzf >/dev/null 2>&1 && fzf --${sh} >/dev/null 2>&1; then
+  eval "\$(fzf --${sh})"
   if command -v fd >/dev/null 2>&1; then
     export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
-    export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+    export FZF_CTRL_T_COMMAND="\$FZF_DEFAULT_COMMAND"
     export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
   fi
   if command -v bat >/dev/null 2>&1; then
@@ -87,11 +89,11 @@ if command -v fzf >/dev/null 2>&1 && fzf --bash >/dev/null 2>&1; then
 fi
 EOF
 )"
-  write_bashrc_block "fzf" "$block"
+  write_rc_block "fzf" "$block"
 }
 
 uninstall() {
-  remove_bashrc_block "fzf"
+  remove_rc_block "fzf"
   if ! command -v fzf >/dev/null 2>&1; then
     return 0
   fi

@@ -48,18 +48,19 @@ install() {
 }
 
 configure() {
+  local sh; sh="$(rc_shell_name)"
   local block
-  block="$(cat <<'EOF'
+  block="$(cat <<EOF
 if command -v zoxide >/dev/null 2>&1; then
-  eval "$(zoxide init bash)"
+  eval "\$(zoxide init ${sh})"
 fi
 EOF
 )"
-  write_bashrc_block "zoxide" "$block"
+  write_rc_block "zoxide" "$block"
 }
 
 uninstall() {
-  remove_bashrc_block "zoxide"
+  remove_rc_block "zoxide"
   if ! command -v zoxide >/dev/null 2>&1; then
     return 0
   fi
