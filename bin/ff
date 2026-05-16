@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+source _fzf
+fd --type f | fzf_common --preview 'bat --style=numbers --color=always --line-range :300 {}'

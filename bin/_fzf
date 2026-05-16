@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+fzf_common() {
+    fzf \
+        --height 40% \
+        --layout reverse \
+        --border \
+        --cycle \
+        --preview-window=right:60% \
+        "$@"
+}
