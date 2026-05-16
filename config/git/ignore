@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.fuse_hidden*
+.Trash-*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Editor swap/backup files
+*.swp
+*.swo
+*.swn
+*.bak
+*.orig
+
+# Editor/IDE local state
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
