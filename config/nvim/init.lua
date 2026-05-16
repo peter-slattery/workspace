@@ -262,9 +262,16 @@ vim.opt.foldenable = false
 local map = vim.keymap.set
 local opts = { noremap = true, silent = true }
 
--- Pane navigation
-map("n", "<leader>r", "<C-w>h", opts)
-map("n", "<leader>u", "<C-w>l", opts)
+-- Pane navigation (tmux gets Alt-hjkl, apps get Ctrl).
+-- Terminal-mode variants drop out of insert first, then jump.
+map("n", "<C-h>", "<C-w>h", opts)
+map("n", "<C-j>", "<C-w>j", opts)
+map("n", "<C-k>", "<C-w>k", opts)
+map("n", "<C-l>", "<C-w>l", opts)
+map("t", "<C-h>", [[<C-\><C-n><C-w>h]], opts)
+map("t", "<C-j>", [[<C-\><C-n><C-w>j]], opts)
+map("t", "<C-k>", [[<C-\><C-n><C-w>k]], opts)
+map("t", "<C-l>", [[<C-\><C-n><C-w>l]], opts)
 
 -- Search
 map("n", "<leader>g", ":Rg<CR>", opts) -- ripgrep search
