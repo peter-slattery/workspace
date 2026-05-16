@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-# Fuzzy find for a git branch and check it out
-
-source _fzf
-git for-each-ref --sort=-committerdate refs/heads \
-  --format='%(refname:short)' \
-  | fzf_common \
-  | xargs git checkout

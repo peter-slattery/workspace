@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-# Fuzzy find for an ssh connection and connect
-
-source _fzf
-host=$(grep -E "^Host " ~/.ssh/config \
-  | awk '{print $2}' \
-  | fzf_common)
-
-[ -n "$host" ] && ssh "$host"

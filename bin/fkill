@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-# Fuzzy find for a process and kill it
-
-source _fzf
-ps -eo pid,comm,%cpu,%mem \
-  | sed 1d \
-  | fzf_common \
-  | awk '{print $1}' \
-  | xargs kill -9
