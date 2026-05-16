@@ -482,17 +482,3 @@ vim.opt.listchars = {
   precedes = "‹",
   nbsp = "␣",
 }
-
--- ==========================
--- Start Up
--- ==========================
-
-vim.api.nvim_create_autocmd("VimEnter", {
-  callback = function()
-    vim.cmd("vertical botright split")
-    vim.cmd("terminal")
-    vim.cmd("file build")
-    vim.cmd("wincmd h")
-  end
-})
-
