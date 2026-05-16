@@ -1,2 +1,15 @@
 [fetch]
 	prune = true
+
+[core]
+	pager = delta
+
+[interactive]
+	diffFilter = delta --color-only
+
+[delta]
+	navigate = true
+	line-numbers = true
+
+[merge]
+	conflictstyle = zdiff3

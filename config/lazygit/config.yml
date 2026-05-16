@@ -1,2 +1,7 @@
 # Lazygit configuration
 # Reference: https://github.com/jesseduffield/lazygit/blob/master/docs/Config.md
+
+git:
+  paging:
+    colorArg: always
+    pager: delta --paging=never --color-only
