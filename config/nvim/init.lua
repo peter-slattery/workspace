@@ -443,6 +443,14 @@ vim.cmd [[
 	autocmd! User FzfPreviewClose redraw!
 ]]
 
+-- Stop auto-continuing comments on <Enter> (r) and o/O (o).
+-- Bundled ftplugins re-add these flags per filetype, so strip on every FileType.
+vim.api.nvim_create_autocmd("FileType", {
+  callback = function()
+    vim.opt_local.formatoptions:remove({ "r", "o" })
+  end,
+})
+
 -- ==========================
 -- UI Improvements
 -- ==========================
