@@ -1,0 +1,315 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB_DIR="$SCRIPT_DIR/../lib/dbg"
+
+SESSIONS_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/dbg-sessions"
+mkdir -p "$SESSIONS_DIR"
+
+DEBUGGER="lldb"
+PROGRAM=""
+SYMBOLS=""
+REMOTE=""
+SESSION_NAME=""
+
+SOURCE_DIRS=()
+SOURCE_MAPS=()
+
+usage() {
+    cat <<EOF
+Usage:
+
+  dbg [options] <program>
+
+Options:
+
+  --lldb                 Use LLDB (default)
+  --gdb                  Use GDB
+  --gdb-remote host:port Use gdbserver remote target
+  --symbols PATH         Symbol/debug info path
+  --source PATH          Add source directory to workspace
+  --map REMOTE=LOCAL     Add source file remap
+  --name NAME            Session name
+
+Commands:
+
+  dbg list
+  dbg open <name>
+  dbg rm <name>
+EOF
+}
+
+list_sessions() {
+    ls "$SESSIONS_DIR"
+}
+
+open_session() {
+    local name="$1"
+    code "$SESSIONS_DIR/$name/workspace.code-workspace"
+}
+
+remove_session() {
+    local name="$1"
+    rm -rf "$SESSIONS_DIR/$name"
+}
+
+infer_source_root() {
+    local candidate
+
+    if [[ -n "$PROGRAM" ]]; then
+        candidate=$(dirname "$PROGRAM")
+
+        if git -C "$candidate" rev-parse --show-toplevel >/dev/null 2>&1; then
+            git -C "$candidate" rev-parse --show-toplevel
+            return
+        fi
+    fi
+
+    pwd
+}
+
+if [[ $# -lt 1 ]]; then
+    usage
+    exit 1
+fi
+
+case "$1" in
+    list)
+        list_sessions
+        exit 0
+        ;;
+
+    open)
+        open_session "$2"
+        exit 0
+        ;;
+
+    rm)
+        remove_session "$2"
+        exit 0
+        ;;
+esac
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --lldb)
+            DEBUGGER="lldb"
+            shift
+            ;;
+
+        --gdb)
+            DEBUGGER="gdb"
+            shift
+            ;;
+
+        --gdb-remote)
+            REMOTE="$2"
+            shift 2
+            ;;
+
+        --symbols)
+            SYMBOLS="$2"
+            shift 2
+            ;;
+
+        --source)
+            SOURCE_DIRS+=("$2")
+            shift 2
+            ;;
+
+        --map)
+            SOURCE_MAPS+=("$2")
+            shift 2
+            ;;
+
+        --name)
+            SESSION_NAME="$2"
+            shift 2
+            ;;
+
+        -h|--help)
+            usage
+            exit 0
+            ;;
+
+        *)
+            PROGRAM="$1"
+            shift
+            ;;
+    esac
+done
+
+if [[ -z "$PROGRAM" && -z "$SYMBOLS" ]]; then
+    echo "No program specified"
+    exit 1
+fi
+
+if [[ -z "$SESSION_NAME" ]]; then
+    base=$(basename "${PROGRAM:-$SYMBOLS}")
+    SESSION_NAME="${base}-$(date +%s)"
+fi
+
+SESSION_DIR="$SESSIONS_DIR/$SESSION_NAME"
+mkdir -p "$SESSION_DIR"
+
+PROGRAM=$(realpath "$PROGRAM" 2>/dev/null || echo "$PROGRAM")
+
+if [[ -n "$SYMBOLS" ]]; then
+    SYMBOLS=$(realpath "$SYMBOLS")
+else
+    SYMBOLS="$PROGRAM"
+fi
+
+if [[ ${#SOURCE_DIRS[@]} -eq 0 ]]; then
+    SOURCE_DIRS+=("$(infer_source_root)")
+fi
+
+WORKSPACE_JSON="$SESSION_DIR/workspace.code-workspace"
+SESSION_JSON="$SESSION_DIR/session.json"
+
+if [[ ${#SOURCE_DIRS[@]} -eq 0 ]]; then
+    FOLDERS_JSON='[]'
+else
+    FOLDERS_JSON=$(printf '%s\n' "${SOURCE_DIRS[@]}" |
+        jq -R . |
+        jq -s 'map({path: .})')
+fi
+
+if [[ ${#SOURCE_MAPS[@]} -eq 0 ]]; then
+    SOURCE_MAP_JSON='{}'
+else
+    SOURCE_MAP_JSON=$(printf '%s\n' "${SOURCE_MAPS[@]}" |
+        jq -R 'split("=") | {(.[0]): .[1]}' |
+        jq -s 'add // {}')
+fi
+
+COMMON_SETTINGS='{
+    "editor.hover.enabled": false,
+    "editor.quickSuggestions": false,
+    "editor.parameterHints.enabled": false,
+    "editor.codeLens": false,
+    "editor.lightbulb.enabled": "off",
+    "editor.semanticHighlighting.enabled": false,
+
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "C_Cpp.errorSquiggles": "Disabled",
+
+    "rust-analyzer.diagnostics.enable": false,
+    "typescript.validate.enable": false,
+    "javascript.validate.enable": false
+}'
+
+if [[ "$DEBUGGER" == "lldb" && -z "$REMOTE" ]]; then
+
+    jq -n \
+        --arg program "$PROGRAM" \
+        --argjson folders "$FOLDERS_JSON" \
+        --argjson sourceMap "$SOURCE_MAP_JSON" \
+        --argjson settings "$COMMON_SETTINGS" \
+'
+{
+  folders: $folders,
+
+  settings: $settings,
+
+  launch: {
+    version: "0.2.0",
+    configurations: [
+      {
+        name: "LLDB Launch",
+        type: "lldb",
+        request: "launch",
+        program: $program,
+        cwd: "${workspaceFolder}",
+        stopOnEntry: false,
+        sourceMap: $sourceMap
+      }
+    ]
+  }
+}
+' > "$WORKSPACE_JSON"
+
+elif [[ "$DEBUGGER" == "gdb" && -z "$REMOTE" ]]; then
+
+    jq -n \
+        --arg program "$PROGRAM" \
+        --argjson folders "$FOLDERS_JSON" \
+        --argjson sourceMap "$SOURCE_MAP_JSON" \
+        --argjson settings "$COMMON_SETTINGS" \
+'
+{
+  folders: $folders,
+
+  settings: $settings,
+
+  launch: {
+    version: "0.2.0",
+    configurations: [
+      {
+        name: "GDB Launch",
+        type: "cppdbg",
+        request: "launch",
+        program: $program,
+        cwd: "${workspaceFolder}",
+        MIMode: "gdb",
+        stopAtEntry: false,
+        externalConsole: false,
+        sourceFileMap: $sourceMap
+      }
+    ]
+  }
+}
+' > "$WORKSPACE_JSON"
+
+elif [[ "$DEBUGGER" == "gdb" && -n "$REMOTE" ]]; then
+
+    jq -n \
+        --arg program "$SYMBOLS" \
+        --arg remote "$REMOTE" \
+        --argjson folders "$FOLDERS_JSON" \
+        --argjson sourceMap "$SOURCE_MAP_JSON" \
+        --argjson settings "$COMMON_SETTINGS" \
+'
+{
+  folders: $folders,
+
+  settings: $settings,
+
+  launch: {
+    version: "0.2.0",
+    configurations: [
+      {
+        name: "Remote GDB",
+        type: "cppdbg",
+        request: "launch",
+        program: $program,
+        cwd: "${workspaceFolder}",
+        MIMode: "gdb",
+        miDebuggerServerAddress: $remote,
+        stopAtEntry: false,
+        externalConsole: false,
+        sourceFileMap: $sourceMap
+      }
+    ]
+  }
+}
+' > "$WORKSPACE_JSON"
+
+else
+    echo "Unsupported debugger mode"
+    exit 1
+fi
+
+cat > "$SESSION_JSON" <<EOF
+{
+    "debugger": "$DEBUGGER",
+    "program": "$PROGRAM",
+    "symbols": "$SYMBOLS",
+    "remote": "$REMOTE",
+    "sources": [$(printf '"%s",' "${SOURCE_DIRS[@]}" | sed 's/,$//')],
+    "created": "$(date)"
+}
+EOF
+
+code "$WORKSPACE_JSON"
