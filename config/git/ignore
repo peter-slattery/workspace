@@ -28,3 +28,15 @@ $RECYCLE.BIN/
 .vscode/
 *.sublime-workspace
 *.sublime-project
+.peter/
+.dev/
+
+# Environment Things
+.envrc
+
+# LLM
+CLAUDE.md
+.claude
+
+# Ripgrep
+.rgignore
