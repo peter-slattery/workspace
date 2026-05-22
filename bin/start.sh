@@ -27,6 +27,9 @@ for script in "$SCRIPT_DIR"/installs/[!_]*.sh; do
 done
 
 echo "======= UPDATING .BASHRC ======="
+
+write_rc_block "prompt line" $'export PS1=\'\\[\\e[34m\\]\\u@\\h\\[\\e[0m\\]:\\[\\e[32m\\]\\w\\[\\e[0m\\]\n→  \''
+
 for script in "$REPO_ROOT"/lib/[!_]*.sh; do
     [[ -f "$script" ]] || continue
     echo "== $script =="
