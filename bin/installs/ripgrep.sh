@@ -6,6 +6,8 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # shellcheck source=../utils/detect_os.sh
 source "$REPO_ROOT/bin/utils/detect_os.sh"
+# shellcheck source=../utils/shell_rc.sh
+source "$REPO_ROOT/bin/utils/shell_rc.sh"
 
 OS="$(detect_os)"
 if [[ "$OS" == "unknown" ]]; then
@@ -52,15 +54,16 @@ configure() {
   local dst; dst="$(config_dst)"
 
   mkdir -p "$(dirname "$dst")"
-  if [[ -f "$dst" ]] && cmp -s "$src" "$dst"; then
-    return 0
+  if [[ ! -f "$dst" ]] || ! cmp -s "$src" "$dst"; then
+    cp "$src" "$dst"
+    echo "Updated ripgrep config -> $dst"
   fi
-  cp "$src" "$dst"
-  echo "Updated ripgrep config -> $dst"
-  echo "  (set RIPGREP_CONFIG_PATH=$dst in your shell to activate)"
+
+  write_rc_block "ripgrep" "export RIPGREP_CONFIG_PATH=\"$dst\""
 }
 
 uninstall() {
+  remove_rc_block "ripgrep"
   local dst; dst="$(config_dst)"
   rm -f "$dst"
   rmdir "$(dirname "$dst")" 2>/dev/null || true

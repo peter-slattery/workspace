@@ -2,5 +2,16 @@
 # Each non-comment line is a single CLI flag passed to rg (e.g. --smart-case).
 # Reference: https://github.com/BurntSushi/ripgrep/blob/master/GUIDE.md#configuration-file
 #
-# Ripgrep does NOT auto-discover this file. Set RIPGREP_CONFIG_PATH in your
-# shell to point at this file for it to take effect.
+# Ripgrep does NOT auto-discover this file. bin/installs/ripgrep.sh writes
+# an rc-block that exports RIPGREP_CONFIG_PATH for new shells.
+
+# Case-insensitive unless the pattern has an uppercase letter.
+--smart-case
+
+# Search dotfiles, but skip the noisy ones below.
+--hidden
+
+--glob=!.git/*
+--glob=!node_modules/*
+--glob=!.venv/*
+--glob=!__pycache__/*
