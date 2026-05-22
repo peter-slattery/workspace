@@ -19,7 +19,10 @@ fi
 # $RIPGREP_CONFIG_PATH. Use a uniform path on all OSes so the env var
 # can be set to the same value everywhere.
 config_dst() {
-  echo "$HOME/.config/ripgrep/config"
+  case "$OS" in
+    windows) echo "${LOCALAPPDATA:-$HOME/AppData/Local}/ripgrep/config" ;;
+    *)       echo "${XDG_CONFIG_HOME:-$HOME/.config}/ripgrep/config" ;;
+  esac
 }
 
 install() {
