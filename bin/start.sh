@@ -51,12 +51,6 @@ else
   write_rc_block "prompt line" $'export PS1=\'\\[\\e[34m\\]\\u@\\h\\[\\e[0m\\]:\\[\\e[32m\\]\\w\\[\\e[0m\\]\n→  \''
 fi
 
-# Clear distro-default aliases that would shadow our bin/ scripts (e.g.
-# Ubuntu's `alias ll='ls -alF'`). This block is appended after distro defaults
-# in .bashrc, so the unalias runs last and wins. `|| true` keeps the block
-# silent on shells where the alias was never set.
-write_rc_block "alias-overrides" "unalias ll 2>/dev/null || true"
-
 for script in "$REPO_ROOT"/lib/[!_]*.sh; do
     [[ -f "$script" ]] || continue
     echo "== $script =="
