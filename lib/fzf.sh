@@ -1,6 +1,8 @@
 # Commands for using fzf in daily terminal use
 
-source _fzf
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+source $REPO_ROOT/bin/_fzf
 
 # Find a directory and cd to it
 fcd() {
