@@ -28,7 +28,15 @@ done
 
 echo "======= UPDATING .BASHRC ======="
 
-write_rc_block "prompt line" $'export PS1=\'\\[\\e[34m\\]\\u@\\h\\[\\e[0m\\]:\\[\\e[32m\\]\\w\\[\\e[0m\\]\n→  \''
+# Stale block from the pre-lib/ layout, when bin/dev.sh was sourced via a
+# bespoke "dev" rc-block. lib/dev.sh is now picked up by the loop below.
+remove_rc_block "dev" >/dev/null 2>&1 || true
+
+if [[ "$(rc_shell_name)" == "zsh" ]]; then
+  write_rc_block "prompt line" $'export PROMPT=\'%F{blue}%n@%m%f:%F{green}%~%f\n→  \''
+else
+  write_rc_block "prompt line" $'export PS1=\'\\[\\e[34m\\]\\u@\\h\\[\\e[0m\\]:\\[\\e[32m\\]\\w\\[\\e[0m\\]\n→  \''
+fi
 
 for script in "$REPO_ROOT"/lib/[!_]*.sh; do
     [[ -f "$script" ]] || continue
