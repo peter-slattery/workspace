@@ -19,6 +19,8 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # shellcheck source=../utils/detect_os.sh
 source "$REPO_ROOT/bin/utils/detect_os.sh"
+# shellcheck source=../utils/shell_rc.sh
+source "$REPO_ROOT/bin/utils/shell_rc.sh"
 
 OS="$(detect_os)"
 if [[ "$OS" == "unknown" ]]; then
@@ -57,6 +59,22 @@ GH_ARCH_AARCH64=""   # Substituted for {ARCH} when uname -m is aarch64/arm64
 # "0.18.2" for delta — projects disagree about leading v). {VERSION} is {TAG}
 # with a leading v stripped. The download URL uses {TAG} so both styles work
 # without per-manifest knobs.
+
+# Config-file copy (single file). The dest is OS-specific because XDG vs.
+# Library/Application Support vs. APPDATA shake out differently. $HOME and
+# friends expand when the manifest is sourced, so write them with the usual
+# ${XDG_CONFIG_HOME:-$HOME/.config}/... form.
+CONFIG_SRC=""              # path relative to $REPO_ROOT, or absolute
+CONFIG_DST_LINUX=""
+CONFIG_DST_MACOS=""
+CONFIG_DST_WINDOWS=""
+
+# Shell rc-block (a managed block in ~/.bashrc or ~/.zshrc). The content is
+# written verbatim except {SHELL} is replaced with bash/zsh (matching the
+# platform default) and {CONFIG_DST} is replaced with the resolved config
+# destination above.
+RC_BLOCK_NAME=""
+RC_BLOCK_CONTENT=""
 
 # shellcheck disable=SC1090
 source "$MANIFEST"
@@ -149,13 +167,46 @@ install() {
   esac
 }
 
-# Manifests can't currently express config-file copies or rc-block writes —
-# if you need those, drop a bespoke installs/<name>.sh alongside the manifest.
+_resolve_config_dst() {
+  case "$OS" in
+    linux)   printf '%s' "$CONFIG_DST_LINUX"   ;;
+    macos)   printf '%s' "$CONFIG_DST_MACOS"   ;;
+    windows) printf '%s' "$CONFIG_DST_WINDOWS" ;;
+  esac
+}
+
 configure() {
-  return 0
+  local CONFIG_DST; CONFIG_DST="$(_resolve_config_dst)"
+
+  if [[ -n "$CONFIG_SRC" && -n "$CONFIG_DST" ]]; then
+    local src="$CONFIG_SRC"
+    [[ "$src" != /* ]] && src="$REPO_ROOT/$src"
+    mkdir -p "$(dirname "$CONFIG_DST")"
+    if [[ ! -f "$CONFIG_DST" ]] || ! cmp -s "$src" "$CONFIG_DST"; then
+      cp "$src" "$CONFIG_DST"
+      echo "Updated $NAME config -> $CONFIG_DST"
+    fi
+  fi
+
+  if [[ -n "$RC_BLOCK_NAME" && -n "$RC_BLOCK_CONTENT" ]]; then
+    local content="$RC_BLOCK_CONTENT"
+    content="${content//\{SHELL\}/$(rc_shell_name)}"
+    content="${content//\{CONFIG_DST\}/$CONFIG_DST}"
+    write_rc_block "$RC_BLOCK_NAME" "$content"
+  fi
 }
 
 uninstall() {
+  # Tear down configure-side state first — independent of whether the binary
+  # is currently on PATH, so a half-installed manifest still cleans up.
+  [[ -n "$RC_BLOCK_NAME" ]] && remove_rc_block "$RC_BLOCK_NAME"
+
+  local CONFIG_DST; CONFIG_DST="$(_resolve_config_dst)"
+  if [[ -n "$CONFIG_DST" && -f "$CONFIG_DST" ]]; then
+    rm -f "$CONFIG_DST"
+    rmdir "$(dirname "$CONFIG_DST")" 2>/dev/null || true
+  fi
+
   if ! command -v "$BIN" >/dev/null 2>&1; then
     return 0
   fi
