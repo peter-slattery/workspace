@@ -1,1 +1,2 @@
-ls -al
+#!/usr/bin/env bash
+exec eza -la --git --icons=auto --group-directories-first "$@"
