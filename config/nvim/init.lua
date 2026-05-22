@@ -165,8 +165,12 @@ pcall(function()
     lsp_file_methods = {
       enabled = false,
     },
-    -- Oil provides its own keymaps inside the directory buffer.
-    -- Leaving defaults is fine for minimal config.
+    keymaps = {
+      ["<C-h>"] = false,
+      ["<C-j>"] = false,
+      ["<C-k>"] = false,
+      ["<C-l>"] = false,
+    }
   })
 end)
 
@@ -189,6 +193,16 @@ ensure_repo("https://github.com/tpope/vim-fugitive.git", "vim-fugitive")
 vim.keymap.set("n", "<leader>gs", ":Git<CR>", { noremap = true, silent = true })      -- status
 vim.keymap.set("n", "<leader>gd", ":Gdiffsplit<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>gb", ":Gblame<CR>", { noremap = true, silent = true })
+
+-- ==========================
+-- vim-easy-align
+-- ==========================
+
+ensure_repo("https://github.com/junegunn/vim-easy-align.git", "vim-easy-align")
+
+-- Start interactive EasyAlign in visual mode (e.g. vipga) and for motion/text object (e.g. gaip)
+vim.keymap.set("x", "ga", "<Plug>(EasyAlign)", {})
+vim.keymap.set("n", "ga", "<Plug>(EasyAlign)", {})
 
 -- ==========================
 -- tree-sitter
