@@ -48,10 +48,15 @@ BREW=""              # macOS: brew formula
 WINGET=""            # Windows: winget --id
 
 GH_REPO=""           # Linux fallback: GitHub owner/repo
-GH_ASSET=""          # Release asset filename; supports {ARCH}, {VERSION}
-GH_BIN_IN_ARCHIVE="" # Path to binary inside the archive; supports the same placeholders
+GH_ASSET=""          # Release asset filename; supports {TAG}, {VERSION}, {ARCH}
+GH_BIN_IN_ARCHIVE="" # Path to binary inside the archive; same placeholders
 GH_ARCH_X86_64=""    # Substituted for {ARCH} when uname -m is x86_64
 GH_ARCH_AARCH64=""   # Substituted for {ARCH} when uname -m is aarch64/arm64
+
+# {TAG} is the verbatim tag_name from the GitHub API (e.g. "v0.24.0" for bat,
+# "0.18.2" for delta — projects disagree about leading v). {VERSION} is {TAG}
+# with a leading v stripped. The download URL uses {TAG} so both styles work
+# without per-manifest knobs.
 
 # shellcheck disable=SC1090
 source "$MANIFEST"
@@ -63,9 +68,9 @@ source "$MANIFEST"
 # Helpers
 # ----------------------------------------------------------------------------
 
-_gh_latest_version() {
+_gh_latest_tag() {
   curl -fsSL "https://api.github.com/repos/$GH_REPO/releases/latest" \
-    | sed -nE 's/.*"tag_name":[[:space:]]*"v?([^"]+)".*/\1/p' \
+    | sed -nE 's/.*"tag_name":[[:space:]]*"([^"]+)".*/\1/p' \
     | head -1
 }
 
@@ -79,24 +84,26 @@ _gh_arch_for_host() {
 
 _subst() {
   local s="$1"
+  s="${s//\{TAG\}/${TAG:-}}"
   s="${s//\{ARCH\}/${ARCH:-}}"
   s="${s//\{VERSION\}/${VERSION:-}}"
   printf '%s' "$s"
 }
 
 install_linux_from_github() {
-  local ARCH VERSION
+  local ARCH TAG VERSION
   ARCH="$(_gh_arch_for_host)" || { echo "Unsupported arch for $NAME: $(uname -m)" >&2; exit 1; }
   [[ -n "$ARCH" ]] || { echo "$NAME: no GH_ARCH_* entry for $(uname -m)" >&2; exit 1; }
-  VERSION="$(_gh_latest_version)"
-  [[ -n "$VERSION" ]] || { echo "Could not determine latest $NAME version" >&2; exit 1; }
+  TAG="$(_gh_latest_tag)"
+  [[ -n "$TAG" ]] || { echo "Could not determine latest $NAME tag" >&2; exit 1; }
+  VERSION="${TAG#v}"
 
   local asset; asset="$(_subst "$GH_ASSET")"
   local inner; inner="$(_subst "$GH_BIN_IN_ARCHIVE")"
 
   local tmp; tmp="$(mktemp -d)"
   curl -fsSL -o "$tmp/pkg.tar.gz" \
-    "https://github.com/$GH_REPO/releases/download/v${VERSION}/${asset}"
+    "https://github.com/$GH_REPO/releases/download/${TAG}/${asset}"
   tar -xzf "$tmp/pkg.tar.gz" -C "$tmp"
   sudo install -m 0755 "$tmp/$inner" "/usr/local/bin/$BIN"
   rm -rf "$tmp"
