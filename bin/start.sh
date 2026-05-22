@@ -9,12 +9,20 @@ source "$SCRIPT_DIR/utils/shell_rc.sh"
 
 write_rc_block "bin-path" "export PATH=\"$SCRIPT_DIR:\$PATH\""
 
+RUNNER="$SCRIPT_DIR/installs/_manifest_runner.sh"
+
 # Install
 echo "======= BEGINNING INSTALLATION ======="
 for script in "$SCRIPT_DIR"/installs/[!_]*.sh; do
   [[ -f "$script" ]] || continue
   echo "== $script =="
   "$script" install
+  echo "Complete $?"
+done
+for manifest in "$REPO_ROOT"/manifests/[!_]*.sh; do
+  [[ -f "$manifest" ]] || continue
+  echo "== $manifest =="
+  "$RUNNER" "$manifest" install
   echo "Complete $?"
 done
 
@@ -24,6 +32,11 @@ for script in "$SCRIPT_DIR"/installs/[!_]*.sh; do
   [[ -f "$script" ]] || continue
   echo "== $script =="
   "$script" configure
+done
+for manifest in "$REPO_ROOT"/manifests/[!_]*.sh; do
+  [[ -f "$manifest" ]] || continue
+  echo "== $manifest =="
+  "$RUNNER" "$manifest" configure
 done
 
 echo "======= UPDATING .BASHRC ======="
@@ -37,6 +50,12 @@ if [[ "$(rc_shell_name)" == "zsh" ]]; then
 else
   write_rc_block "prompt line" $'export PS1=\'\\[\\e[34m\\]\\u@\\h\\[\\e[0m\\]:\\[\\e[32m\\]\\w\\[\\e[0m\\]\n→  \''
 fi
+
+# Clear distro-default aliases that would shadow our bin/ scripts (e.g.
+# Ubuntu's `alias ll='ls -alF'`). This block is appended after distro defaults
+# in .bashrc, so the unalias runs last and wins. `|| true` keeps the block
+# silent on shells where the alias was never set.
+write_rc_block "alias-overrides" "unalias ll 2>/dev/null || true"
 
 for script in "$REPO_ROOT"/lib/[!_]*.sh; do
     [[ -f "$script" ]] || continue
