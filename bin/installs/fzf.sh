@@ -62,12 +62,7 @@ install() {
       brew install fzf
       ;;
     windows)
-      if   command -v winget >/dev/null 2>&1; then
-        winget install --id junegunn.fzf -e --silent \
-          --accept-package-agreements --accept-source-agreements
-      elif command -v scoop >/dev/null 2>&1; then scoop install fzf
-      else echo "Need winget or scoop installed on Windows to install fzf." >&2; exit 1
-      fi
+      $SCRIPT_DIR/_windows_install.sh junegunn.fzf
       ;;
   esac
 }
@@ -106,10 +101,7 @@ uninstall() {
       brew uninstall fzf
       ;;
     windows)
-      if   command -v winget >/dev/null 2>&1; then
-        winget uninstall --id junegunn.fzf -e --silent
-      elif command -v scoop >/dev/null 2>&1; then scoop uninstall fzf
-      fi
+      $SCRIPT_DIR/_windows_uninstall.sh junegunn.fzf
       ;;
   esac
 }

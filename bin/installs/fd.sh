@@ -54,12 +54,7 @@ install() {
       brew install fd
       ;;
     windows)
-      if   command -v winget >/dev/null 2>&1; then
-        winget install --id sharkdp.fd -e --silent \
-          --accept-package-agreements --accept-source-agreements
-      elif command -v scoop >/dev/null 2>&1; then scoop install fd
-      else echo "Need winget or scoop installed on Windows to install fd." >&2; exit 1
-      fi
+      $SCRIPT_DIR/_windows_install.sh sharkdp.fd
       ;;
   esac
 }
@@ -81,10 +76,7 @@ uninstall() {
       brew uninstall fd
       ;;
     windows)
-      if   command -v winget >/dev/null 2>&1; then
-        winget uninstall --id sharkdp.fd -e --silent
-      elif command -v scoop >/dev/null 2>&1; then scoop uninstall fd
-      fi
+      $SCRIPT_DIR/_windows_uninstall.sh sharkdp.fd
       ;;
   esac
 }

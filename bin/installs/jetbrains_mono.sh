@@ -29,6 +29,10 @@ is_installed() {
   esac
 }
 
+can_verify_install() {
+  [[ "$OS" != "windows" ]]
+}
+
 install_linux_from_github() {
   local tmp; tmp="$(mktemp -d)"
 
@@ -51,7 +55,7 @@ install_linux_from_github() {
 
 install() {
   echo "Installing $FONT_NAME..."
-  if is_installed; then
+  if can_verify_install && is_installed; then
     echo "  Already installed"
     return 0
   fi
@@ -74,18 +78,15 @@ install() {
       brew install --cask font-jetbrains-mono-nerd-font
       ;;
     windows)
-      if command -v scoop >/dev/null 2>&1; then
-        scoop bucket add nerd-fonts || true
-        scoop install nerd-fonts/JetBrainsMono-NF
+      if command -v winget >/dev/null 2>&1; then
+        $SCRIPT_DIR/_windows_install.sh DEVCOM.JetBrainsMonoNerdFont
       else
-        echo "Install scoop and re-run, or download JetBrainsMono.zip from" >&2
-        echo "https://github.com/ryanoasis/nerd-fonts/releases/latest manually." >&2
-        exit 1
+        echo "Install scoop or winget, or download JetBrainsMono.zip manually." >&2
       fi
       ;;
   esac
 
-  if ! is_installed; then
+  if can_verify_install && ! is_installed; then
     echo "Font install completed but '$FONT_NAME' not visible to fontconfig yet." >&2
     [[ "$OS" == "linux" ]] && echo "Try opening a new terminal or running: fc-cache -fv" >&2
   fi

@@ -43,12 +43,7 @@ install() {
       brew install neovim
       ;;
     windows)
-      if   command -v winget >/dev/null 2>&1; then
-        winget install --id Neovim.Neovim -e --silent \
-          --accept-package-agreements --accept-source-agreements
-      elif command -v scoop >/dev/null 2>&1; then scoop install neovim
-      else echo "Need winget or scoop installed on Windows to install neovim." >&2; exit 1
-      fi
+      $SCRIPT_DIR/_windows_install.sh Neovim.Neovim
       ;;
   esac
 }
@@ -86,10 +81,7 @@ uninstall() {
       brew uninstall neovim
       ;;
     windows)
-      if   command -v winget >/dev/null 2>&1; then
-        winget uninstall --id Neovim.Neovim -e --silent
-      elif command -v scoop >/dev/null 2>&1; then scoop uninstall neovim
-      fi
+      $SCRIPT_DIR/_windows_uninstall.sh Neovim.Neovim
       ;;
   esac
 }

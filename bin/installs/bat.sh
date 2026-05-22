@@ -54,12 +54,7 @@ install() {
       brew install bat
       ;;
     windows)
-      if   command -v winget >/dev/null 2>&1; then
-        winget install --id sharkdp.bat -e --silent \
-          --accept-package-agreements --accept-source-agreements
-      elif command -v scoop >/dev/null 2>&1; then scoop install bat
-      else echo "Need winget or scoop installed on Windows to install bat." >&2; exit 1
-      fi
+      $SCRIPT_DIR/_windows_install.sh sharkdp.bat
       ;;
   esac
 }
@@ -81,10 +76,7 @@ uninstall() {
       brew uninstall bat
       ;;
     windows)
-      if   command -v winget >/dev/null 2>&1; then
-        winget uninstall --id sharkdp.bat -e --silent
-      elif command -v scoop >/dev/null 2>&1; then scoop uninstall bat
-      fi
+      $SCRIPT_DIR/_windows_uninstall.sh sharkdp.bat
       ;;
   esac
 }

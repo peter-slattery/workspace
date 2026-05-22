@@ -37,12 +37,7 @@ install() {
       brew install zoxide
       ;;
     windows)
-      if   command -v winget >/dev/null 2>&1; then
-        winget install --id ajeetdsouza.zoxide -e --silent \
-          --accept-package-agreements --accept-source-agreements
-      elif command -v scoop >/dev/null 2>&1; then scoop install zoxide
-      else echo "Need winget or scoop installed on Windows to install zoxide." >&2; exit 1
-      fi
+      $SCRIPT_DIR/_windows_install.sh ajeetdsouza.zoxide
       ;;
   esac
 }
@@ -76,10 +71,7 @@ uninstall() {
       brew uninstall zoxide
       ;;
     windows)
-      if   command -v winget >/dev/null 2>&1; then
-        winget uninstall --id ajeetdsouza.zoxide -e --silent
-      elif command -v scoop >/dev/null 2>&1; then scoop uninstall zoxide
-      fi
+      $SCRIPT_DIR/_windows_uninstall.sh ajeetdsouza.zoxide
       ;;
   esac
 }

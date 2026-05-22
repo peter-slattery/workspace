@@ -67,12 +67,7 @@ install() {
       brew install git
       ;;
     windows)
-      if   command -v winget >/dev/null 2>&1; then
-        winget install --id Git.Git -e --silent \
-          --accept-package-agreements --accept-source-agreements
-      elif command -v scoop >/dev/null 2>&1; then scoop install git
-      else echo "Need winget or scoop installed on Windows to upgrade git." >&2; exit 1
-      fi
+      echo "Doing nothing..."
       ;;
   esac
 

@@ -42,12 +42,7 @@ install() {
       brew install ripgrep
       ;;
     windows)
-      if   command -v winget >/dev/null 2>&1; then
-        winget install --id BurntSushi.ripgrep.MSVC -e --silent \
-          --accept-package-agreements --accept-source-agreements
-      elif command -v scoop >/dev/null 2>&1; then scoop install ripgrep
-      else echo "Need winget or scoop installed on Windows to install ripgrep." >&2; exit 1
-      fi
+      $SCRIPT_DIR/_windows_install.sh BurntSushi.ripgrep.MSVC
       ;;
   esac
 }
@@ -85,10 +80,7 @@ uninstall() {
       brew uninstall ripgrep
       ;;
     windows)
-      if   command -v winget >/dev/null 2>&1; then
-        winget uninstall --id BurntSushi.ripgrep.MSVC -e --silent
-      elif command -v scoop >/dev/null 2>&1; then scoop uninstall ripgrep
-      fi
+      $SCRIPT_DIR/_windows_uninstall.sh BurntSushi.ripgrep.MSVC
       ;;
   esac
 }

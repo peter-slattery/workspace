@@ -64,12 +64,7 @@ install() {
       brew install lazygit
       ;;
     windows)
-      if   command -v winget >/dev/null 2>&1; then
-        winget install --id JesseDuffield.lazygit -e --silent \
-          --accept-package-agreements --accept-source-agreements
-      elif command -v scoop >/dev/null 2>&1; then scoop install lazygit
-      else echo "Need winget or scoop installed on Windows to install lazygit." >&2; exit 1
-      fi
+      $SCRIPT_DIR/_windows_install.sh JesseDuffield.lazygit
       ;;
   esac
 }
@@ -104,10 +99,7 @@ uninstall() {
       brew uninstall lazygit
       ;;
     windows)
-      if   command -v winget >/dev/null 2>&1; then
-        winget uninstall --id JesseDuffield.lazygit -e --silent
-      elif command -v scoop >/dev/null 2>&1; then scoop uninstall lazygit
-      fi
+      $SCRIPT_DIR/_windows_uninstall.sh JesseDuffield.lazygit
       ;;
   esac
 }

@@ -54,12 +54,7 @@ install() {
       brew install git-delta
       ;;
     windows)
-      if   command -v winget >/dev/null 2>&1; then
-        winget install --id dandavison.delta -e --silent \
-          --accept-package-agreements --accept-source-agreements
-      elif command -v scoop >/dev/null 2>&1; then scoop install delta
-      else echo "Need winget or scoop installed on Windows to install delta." >&2; exit 1
-      fi
+      $SCRIPT_DIR/_windows_install.sh dandavison.delta
       ;;
   esac
 }
@@ -83,10 +78,7 @@ uninstall() {
       brew uninstall git-delta
       ;;
     windows)
-      if   command -v winget >/dev/null 2>&1; then
-        winget uninstall --id dandavison.delta -e --silent
-      elif command -v scoop >/dev/null 2>&1; then scoop uninstall delta
-      fi
+      $SCRIPT_DIR/_windows_uninstall.sh dandavison.delta
       ;;
   esac
 }
