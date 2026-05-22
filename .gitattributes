@@ -1,0 +1,23 @@
+# Default: treat as text, normalize to LF on commit, LF on checkout.
+# Windows checkouts must keep LF so bash scripts and config files work
+# under git-bash. See GUIDELINES.md (Cross-platform).
+* text=auto eol=lf
+
+# Be explicit about anything that absolutely must stay LF.
+*.sh    text eol=lf
+*.bash  text eol=lf
+*.zsh   text eol=lf
+*.lua   text eol=lf
+*.conf  text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+
+# Common binaries — keep git from line-ending mangling.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.zip   binary
+*.gz    binary
+*.tar   binary
