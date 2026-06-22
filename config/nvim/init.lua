@@ -276,6 +276,11 @@ vim.opt.foldenable = false
 local map = vim.keymap.set
 local opts = { noremap = true, silent = true }
 
+-- Basic Navigation
+-- Should remain similar to default vim/neovim bindings
+map("n", "j", "jzz", opts)
+map("n", "k", "kzz", opts)
+
 -- Pane navigation (tmux gets Alt-hjkl, apps get Ctrl).
 -- Terminal-mode variants drop out of insert first, then jump.
 map("n", "<C-h>", "<C-w>h", opts)
