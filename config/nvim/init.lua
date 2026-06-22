@@ -311,8 +311,6 @@ map("n", "qk", ":vertical cprev<CR>zz", opts)
 map("n", "qJ", ":vertical cfirst<CR>zz", opts)
 map("n", "qK", ":vertical clast<CR>zz", opts)
 
-map("n", "<leader>r", ":make<CR>", opts)
-
 -- File navigation
 map("n", "<leader>f", ":Files<CR>", opts) -- project files
 map("n", "<leader>b", ":Buffers<CR>", opts) -- buffers
@@ -376,50 +374,6 @@ map('n', '<C-u>', '<C-u>zz', opts)
 map('n', '<leader>s', ':%s/\\<<C-r><C-w>\\>//g<Left><Left>', { noremap = true }) -- replace word under cursor
 map('v', '<leader>s', '"hy:%s/<C-r>h//g<Left><Left>', { noremap = true }) -- replace visual selection
 
--- Terminal Nav
-local function jump_to_terminal(name, repeat_last_command)
-  for _, win in ipairs(vim.api.nvim_list_wins()) do
-    local buf = vim.api.nvim_win_get_buf(win)
-    if vim.api.nvim_buf_get_name(buf):match(name .. "$") then
-      local ok, chan = pcall(vim.api.nvim_buf_get_option, buf, "channel")
-      if not ok or chan == 0 then return end
-      vim.api.nvim_set_current_win(win)
-      vim.cmd("startinsert")
-      vim.api.nvim_chan_send(chan, "\027[A")
-      return
-    end
-  end
-
-  local target_buf = nil
-  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.api.nvim_buf_get_name(buf):match(name .. "$") then
-      target_buf = buf
-      break
-    end
-  end
-
-  if target_buf == nil then
-    if #vim.api.nvim_list_wins() > 1 then vim.cmd("wincmd w") end
-    vim.cmd("terminal")
-    vim.cmd("file " .. name)
-    vim.cmd("startinsert")
-    return
-  end
-
-  local ok, chan = pcall(vim.api.nvim_buf_get_option, target_buf, "channel")
-  if not ok or chan == 0 then return end
-  if #vim.api.nvim_list_wins() > 1 then vim.cmd("wincmd w") end
-  vim.api.nvim_set_current_buf(target_buf)
-  vim.cmd("startinsert")
-  if repeat_last_command then
-      vim.api.nvim_chan_send(chan, "\027[A")
-  end
-end
-
-vim.keymap.set('n', '<leader>1', function() jump_to_terminal("build", true) end, { noremap = true })
-vim.keymap.set('n', '<leader>2', function() jump_to_terminal("git") end, { noremap = true })
-vim.keymap.set('n', '<leader>3', function() jump_to_terminal("llm") end, { noremap = true })
-
 -- ==========================
 -- Quality of Life
 -- ==========================
@@ -477,6 +431,64 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.opt_local.formatoptions:remove({ "r", "o" })
   end,
 })
+
+-- ==========================
+-- Run Command List / Buffer
+-- ==========================
+
+local cmd_buf = nil
+local CMD_BUF_NAME = 'Run Commands'
+local last_command_line = nil
+
+-- reuse the Run Commands buffer if it exists, otherwise create it empty
+local function ensure_buf()
+  if cmd_buf and vim.api.nvim_buf_is_valid(cmd_buf) then return cmd_buf end
+  for _, b in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_valid(b)
+       and vim.fn.fnamemodify(vim.api.nvim_buf_get_name(b), ':t') == CMD_BUF_NAME then
+      cmd_buf = b
+      return b
+    end
+  end
+  cmd_buf = vim.api.nvim_create_buf(true, true)  -- listed, scratch (nofile/hide/noswap)
+  vim.api.nvim_buf_set_name(cmd_buf, CMD_BUF_NAME)
+  -- vim.bo[cmd_buf].filetype = 'sh'  -- optional: shell highlighting for each line
+  return cmd_buf
+end
+
+-- create it at startup so it's ready (not shown; opened on demand below)
+vim.api.nvim_create_autocmd('VimEnter', { callback = ensure_buf })
+
+-- toggle the buffer in a split
+vim.keymap.set('n', '<leader>R', function()
+  local buf = ensure_buf()
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_get_buf(win) == buf then
+      return vim.api.nvim_win_close(win, false)
+    end
+  end
+  vim.cmd.split()
+  vim.api.nvim_win_set_buf(0, buf)
+end, { desc = 'toggle Run Commands buffer' })
+
+-- run line N of the Run Commands buffer via :make
+local function run_line(n)
+  local buf = ensure_buf()
+  local line = vim.api.nvim_buf_get_lines(buf, n - 1, n, false)[1]
+  if not line or line:match('^%s*$') or line:match('^%s*#') then
+    return vim.notify('no command on line ' .. n, vim.log.levels.WARN)
+  end
+  vim.o.makeprg = line
+  vim.cmd.make()
+end
+
+for i = 1, 9 do
+  vim.keymap.set('n', '<leader>' .. i, function() run_line(i) end,
+    { desc = 'run Run Commands line ' .. i })
+end
+
+-- run the current make line - if one was set via <leader># earlier, it will be run here
+map("n", "<leader>r", ":make<CR>", opts)
 
 -- ==========================
 -- UI Improvements
