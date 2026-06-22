@@ -306,10 +306,12 @@ map("n", "<leader>/", ":BLines<CR>", opts) -- search in current buffer
 -- Quickfix
 map("n", "<leader>q", ":copen<CR>", opts) --
 map("n", "<leader>c", ":cclose<CR>", opts) --
-map("n", "]q", ":vertical cnext<CR>zz", opts)
-map("n", "[q", ":vertical cprev<CR>zz", opts)
-map("n", "[Q", ":vertical cfirst<CR>zz", opts)
-map("n", "]Q", ":vertical clast<CR>zz", opts)
+map("n", "qj", ":vertical cnext<CR>zz", opts)
+map("n", "qk", ":vertical cprev<CR>zz", opts)
+map("n", "qJ", ":vertical cfirst<CR>zz", opts)
+map("n", "qK", ":vertical clast<CR>zz", opts)
+
+map("n", "<leader>r", ":make<CR>", opts)
 
 -- File navigation
 map("n", "<leader>f", ":Files<CR>", opts) -- project files
@@ -323,6 +325,10 @@ vim.api.nvim_create_user_command("QfFromBuffer", function()
   vim.cmd("copen")
 end, {})
 map("n", "<leader>qb", ":QfFromBuffer<CR>", opts)
+
+-- Horizontal split in current pane
+vim.api.nvim_create_user_command("Hs", "split", {})
+vim.cmd([[cnoreabbrev <expr> hs (getcmdtype() == ':' && getcmdline() ==# 'hs') ? 'Hs' : 'hs']])
 
 -- Location list (per-window)
 map("n", "]l", ":lnext<CR>zz", opts)
