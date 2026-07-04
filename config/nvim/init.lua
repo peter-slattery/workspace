@@ -27,6 +27,12 @@ vim.opt.splitbelow = true
 vim.opt.complete = {'.', 'w', 'b', 'u'} -- complete based on tokens in { current buffer, other windows, all buffers, unloaded buffers in buffer list }
 vim.opt.completeopt = {"menu", "menuone", "noselect"} -- show completion popup nicely
 
+-- Command-line completion: show suggestions in a popup menu.
+-- Press <Tab> after ':' to see/cycle available commands (and their args).
+vim.opt.wildmenu = true
+vim.opt.wildmode = {"longest:full", "full"} -- complete longest common, then cycle full matches
+vim.opt.wildoptions = "pum" -- show candidates in a popup menu above the command line
+
 -- Tab Behavior
 vim.opt.expandtab = true -- insert spaces
 vim.opt.shiftwidth = 4
@@ -92,7 +98,18 @@ end
 -- ==========================
 
 ensure_repo("https://github.com/folke/tokyonight.nvim.git", "tokyonight.nvim")
-pcall(vim.cmd.colorscheme, "tokyonight")
+pcall(vim.cmd.colorscheme, "tokyonight-night")
+
+-- Easy-to-remember theme switching: :Dark and :Light
+vim.api.nvim_create_user_command("Dark", function()
+  vim.opt.background = "dark"
+  pcall(vim.cmd.colorscheme, "tokyonight-night")
+end, { desc = "switch to dark theme" })
+
+vim.api.nvim_create_user_command("Light", function()
+  vim.opt.background = "light"
+  pcall(vim.cmd.colorscheme, "tokyonight-day")
+end, { desc = "switch to light theme" })
 
 -- ==========================
 -- fzf config
@@ -309,12 +326,34 @@ end, { noremap = true, silent = true })
 map("n", "<leader>/", ":BLines<CR>", opts) -- search in current buffer
 
 -- Quickfix
+-- Force the quickfix window to span the full width at the very bottom
+-- (rather than inheriting the current split column). Loclists stay per-window.
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "qf",
+  callback = function()
+    if vim.fn.win_gettype() == "quickfix" then
+      vim.cmd("wincmd J")
+    end
+  end,
+})
+
 map("n", "<leader>q", ":copen<CR>", opts) --
 map("n", "<leader>c", ":cclose<CR>", opts) --
-map("n", "qj", ":vertical cnext<CR>zz", opts)
-map("n", "qk", ":vertical cprev<CR>zz", opts)
-map("n", "qJ", ":vertical cfirst<CR>zz", opts)
-map("n", "qK", ":vertical clast<CR>zz", opts)
+-- Jump through quickfix and center the destination. The recenter is scheduled
+-- so it lands after :cnext's buffer-load autocmds (e.g. cursor restore) and the
+-- redraw settle, which an inline `zz` can race against.
+local function qf_nav(cmd)
+  local ok, err = pcall(vim.cmd, "vertical " .. cmd)
+  if not ok then
+    return vim.notify(err:gsub("^Vim%(.-%):", ""), vim.log.levels.WARN)
+  end
+  vim.schedule(function() vim.cmd("normal! zz") end)
+end
+
+map("n", "qj", function() qf_nav("cnext") end, opts)
+map("n", "qk", function() qf_nav("cprev") end, opts)
+map("n", "qJ", function() qf_nav("cfirst") end, opts)
+map("n", "qK", function() qf_nav("clast") end, opts)
 
 -- File navigation
 map("n", "<leader>f", ":Files<CR>", opts) -- project files
@@ -526,3 +565,79 @@ vim.opt.listchars = {
   precedes = "‹",
   nbsp = "␣",
 }
+
+-- ==========================
+-- Section break rendering
+-- ==========================
+-- A line of the form `<comment> ~` renders as a full-width rule.
+-- A line of the form `<comment> ~ <title>` renders as `── title ──`.
+-- The line the cursor is on always shows its raw text, so it stays editable
+-- and the cursor is never lost under the overlay.
+
+local section_ns = vim.api.nvim_create_namespace("section_break")
+
+-- box-drawing horizontal line; swap for "=" if your font lacks it
+local SECTION_RULE = "─"
+
+local function section_leader(bufnr)
+  local cs = vim.bo[bufnr].commentstring
+  if cs == nil or cs == "" then return nil end
+  local prefix = cs:match("^(.-)%s*%%s")
+  if prefix == nil or prefix == "" then return nil end
+  return vim.trim(prefix)
+end
+
+local function section_render(bufnr)
+  if not vim.api.nvim_buf_is_loaded(bufnr) then return end
+  vim.api.nvim_buf_clear_namespace(bufnr, section_ns, 0, -1)
+
+  local leader = section_leader(bufnr)
+  if not leader then return end
+
+  local leader_pat = vim.pesc(leader)
+  local break_pat = "^%s*" .. leader_pat .. "%s*~%s*$"
+  local title_pat = "^%s*" .. leader_pat .. "%s*~%s+(.-)%s*$"
+
+  local width = vim.bo[bufnr].textwidth
+  if width == nil or width <= 0 then width = 80 end
+
+  -- Don't render the line the cursor sits on (in windows showing this buffer),
+  -- so it reveals its raw, editable text.
+  local skip = {}
+  for _, win in ipairs(vim.fn.win_findbuf(bufnr)) do
+    skip[vim.api.nvim_win_get_cursor(win)[1]] = true
+  end
+
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  for i, line in ipairs(lines) do
+    if not skip[i] then
+      local rendered
+      if line:match(break_pat) then
+        rendered = string.rep(SECTION_RULE, width)
+      else
+        local title = line:match(title_pat)
+        if title and title ~= "" then
+          local pad = width - #title - 2
+          if pad < 4 then pad = 4 end
+          local left = math.floor(pad / 2)
+          local right = pad - left
+          rendered = string.rep(SECTION_RULE, left) .. " " .. title .. " " .. string.rep(SECTION_RULE, right)
+        end
+      end
+      if rendered then
+        vim.api.nvim_buf_set_extmark(bufnr, section_ns, i - 1, 0, {
+          virt_text = { { rendered, "Comment" } },
+          virt_text_pos = "overlay",
+          hl_mode = "combine",
+        })
+      end
+    end
+  end
+end
+
+vim.api.nvim_create_autocmd({
+  "BufEnter", "BufWinEnter", "FileType", "TextChanged", "TextChangedI",
+  "CursorMoved", "CursorMovedI",
+}, {
+  callback = function(args) section_render(args.buf) end,
+})
