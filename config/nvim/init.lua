@@ -14,6 +14,7 @@ vim.opt.updatetime = 300
 vim.opt.signcolumn = "yes"
 vim.opt.clipboard = "unnamedplus"
 vim.opt.wrap = false
+vim.opt.colorcolumn = "90" -- vertical guide line at column 90
 
 vim.o.autoread = true -- read files when changed on disk
 
@@ -94,21 +95,22 @@ local function ensure_repo(repo_url, folder_name, branch)
 end
 
 -- ==========================
--- tokyonight
+-- gruvbox
 -- ==========================
 
-ensure_repo("https://github.com/folke/tokyonight.nvim.git", "tokyonight.nvim")
-pcall(vim.cmd.colorscheme, "tokyonight-night")
+ensure_repo("https://github.com/ellisonleao/gruvbox.nvim.git", "gruvbox.nvim")
+require("gruvbox").setup({})
+pcall(vim.cmd.colorscheme, "gruvbox")
 
 -- Easy-to-remember theme switching: :Dark and :Light
 vim.api.nvim_create_user_command("Dark", function()
   vim.opt.background = "dark"
-  pcall(vim.cmd.colorscheme, "tokyonight-night")
+  pcall(vim.cmd.colorscheme, "gruvbox")
 end, { desc = "switch to dark theme" })
 
 vim.api.nvim_create_user_command("Light", function()
   vim.opt.background = "light"
-  pcall(vim.cmd.colorscheme, "tokyonight-day")
+  pcall(vim.cmd.colorscheme, "gruvbox")
 end, { desc = "switch to light theme" })
 
 -- ==========================
@@ -541,7 +543,6 @@ map("n", "<leader>r", ":make<CR>", opts)
 vim.opt.cursorline = true
 vim.opt.pumheight = 12 -- Slightly nicer completion/menu borders (built-in UI)
 
-vim.api.nvim_set_hl(0, "CursorLine", { bg = "#2a2a2a" })
 vim.api.nvim_set_hl(0, "Search", { fg = "#000000", bg = "#ffd75f" })
 vim.api.nvim_set_hl(0, "IncSearch", { fg = "#000000", bg = "#ffaf00" })
 
